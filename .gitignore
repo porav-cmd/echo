@@ -1,0 +1,18 @@
+# Virtual Environment
+venv/
+env/
+
+# Environment Variables & Secret API Keys
+.env
+
+# Python Caches
+__pycache__/
+*.pyc
+
+# Local Database & Uploaded Files
+db.sqlite3
+media/
+
+# IDE Settings
+.vscode/
+.idea/
