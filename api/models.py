@@ -1,16 +1,36 @@
 from django.db import models
-from django.contrib.auth.models import User 
+from django.contrib.auth.models import User
 
 class DocumentsMetaData(models.Model):
-    owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    """
+    Tracks uploaded document metadata, file paths, total chunks, and user ownership.
+    """
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='documents')
     filename = models.CharField(max_length=255)
-    total_chunks = models.IntegerField(default = 0)
+    total_chunks = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name_plural = "Documents Metadata"
+
+    def __str__(self):
+        return f"{self.filename} ({self.total_chunks} chunks) - Owner: {self.owner.username}"
+
+
 class ChatHistory(models.Model):
-    owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    """
+    Logs user Q&A interactions, intent classifications, answers, and timestamps.
+    """
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='chat_history')
     query = models.TextField()
     answer = models.TextField()
-    intent = models.CharField(max_length=50)
+    intent = models.CharField(max_length=50, default='RAG')
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name_plural = "Chat Histories"
+
+    def __str__(self):
+        return f"[{self.intent}] {self.query[:30]}... by {self.owner.username}"

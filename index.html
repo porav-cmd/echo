@@ -16,10 +16,10 @@
 </head>
 <body class="dark-theme">
     <div class="app-container">
-        <!-- Mobile Overlay -->
+        <!-- Sidebar Overlay (Mobile) -->
         <div id="sidebar-overlay" class="sidebar-overlay"></div>
 
-        <!-- Sidebar -->
+        <!-- Sidebar Navigation -->
         <aside id="app-sidebar" class="sidebar">
             <div class="brand">
                 <div class="brand-icon">
@@ -42,45 +42,46 @@
                 <a href="/?tab=chat" class="nav-item {% if active_tab == 'chat' %}active{% endif %}">
                     <i class="fa-solid fa-comments"></i> Supervisor Chat
                 </a>
-    <a href="/?tab=documents" class="nav-item {% if active_tab == 'documents' %}active{% endif %}">
-        <i class="fa-solid fa-folder-open"></i> Document Hub
-    </a>
-    <a href="/?tab=history" class="nav-item {% if active_tab == 'history' %}active{% endif %}">
-        <i class="fa-solid fa-clock-rotate-left"></i> Query History
-    </a>
-</nav>
+                <a href="/?tab=documents" class="nav-item {% if active_tab == 'documents' %}active{% endif %}">
+                    <i class="fa-solid fa-folder-open"></i> Document Hub
+                </a>
+                <a href="/?tab=history" class="nav-item {% if active_tab == 'history' %}active{% endif %}">
+                    <i class="fa-solid fa-clock-rotate-left"></i> Query History
+                </a>
+            </nav>
 
             <div class="sidebar-section">
                 <div class="section-header">
-                    <span>Recent Activity</span>
+                    <span>System Status</span>
                 </div>
-                <div id="recent-history-list" class="recent-list">
-                    <div class="recent-item skeleton"></div>
-                    <div class="recent-item skeleton"></div>
+                <div class="recent-list">
+                    <div class="status-badge online">
+                        <span class="pulse-dot"></span>
+                        <span>Vector Index Active</span>
+                    </div>
                 </div>
             </div>
 
             <div class="sidebar-footer">
                 <div class="user-info">
-                  <div class="avatar">
-                   {% if user.is_authenticated %}{{ user.username|slice:":2"|upper }}{% else %}Guest{% endif %}
-                  </div>
-                  <div class="user-details">
-                  <span class="username">
-                      {% if user.is_authenticated %}{{ user.username }}{% else %}Not Logged In{% endif %}
-                  </span>
-                  <span class="status">
-                      {% if user.is_authenticated %}Online{% else %}Offline{% endif %}
-                  </span>
-                 </div>
-              </div>
+                    <div class="avatar">
+                        {% if user.is_authenticated %}{{ user.username|slice:":2"|upper }}{% else %}Guest{% endif %}
+                    </div>
+                    <div class="user-details">
+                        <span class="username">
+                            {% if user.is_authenticated %}{{ user.username }}{% else %}Not Logged In{% endif %}
+                        </span>
+                        <span class="status">
+                            {% if user.is_authenticated %}Online{% else %}Offline{% endif %}
+                        </span>
+                    </div>
+                </div>
 
-              {% if user.is_authenticated %}
-                 <a href="/logout/" class="btn-icon" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></a>
-              {% endif %}
-              <button id="btn-auth-action" class="btn-icon" title="Login / Register">
-                    <i class="fa-solid fa-right-to-bracket"></i>
-              </button>
+                {% if user.is_authenticated %}
+                    <a href="/logout/" class="btn-icon" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></a>
+                {% else %}
+                    <button id="btn-auth-action" class="btn-icon" title="Login / Register"><i class="fa-solid fa-right-to-bracket"></i></button>
+                {% endif %}
             </div>
         </aside>
 
@@ -109,38 +110,46 @@
             <section id="tab-chat" class="tab-content {% if active_tab == 'chat' %}active{% endif %}">
                 <div class="chat-container">
                     <div id="chat-messages" class="messages-list">
-                         {% for msg in chat_history %}
-                             <!-- User Question Bubble -->
-                             <div class="message user-message">
-                                   <div class="message-content">
-                                         <p>{{ msg.query }}</p>
-                                    </div>
-                             </div>
+                        {% for msg in chat_history %}
+                            <!-- User Question Bubble -->
+                            <div class="message user-message">
+                                <div class="message-content">
+                                    <p>{{ msg.query }}</p>
+                                </div>
+                            </div>
 
-                             <!-- AI Answer Bubble with Intent Badge -->
-                             <div class="message ai-message">
+                            <!-- AI Answer Bubble with Intent Badge -->
+                            <div class="message ai-message">
                                 <div class="message-header">
                                     <span class="pill pill-{{ msg.intent|lower }}">{{ msg.intent }}</span>
                                 </div>
                                 <div class="message-content">
-                                   <p>{{ msg.answer|linebreaks }}</p>
+                                    <p>{{ msg.answer|linebreaks }}</p>
                                 </div>
-                             </div>
-                         {% empty %}
-                          <!-- Display Welcome Card if chat_history is empty -->
-                             <div class="welcome-card">
+                            </div>
+                        {% empty %}
+                            <!-- Welcome Card -->
+                            <div class="welcome-card">
+                                <div class="welcome-icon">
+                                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                </div>
                                 <h3>Welcome to Enterprise Knowledge Assistant</h3>
-                                <p>Ask anything about your documents, request python code, or start a general conversation!</p>
-                             </div>
-                         {% endfor %}
+                                <p>Ask anything about your documents, request python code, or start a general conversation. Our Supervisor Agent automatically routes your query to the best worker!</p>
+                                <div class="feature-pills">
+                                    <span class="pill pill-rag"><i class="fa-solid fa-book"></i> RAG Search</span>
+                                    <span class="pill pill-code"><i class="fa-solid fa-code"></i> Code Dev Tool</span>
+                                    <span class="pill pill-general"><i class="fa-solid fa-comment-dots"></i> General Chat</span>
+                                </div>
+                            </div>
+                        {% endfor %}
                     </div>
 
-                    <!-- Input Box -->
+                    <!-- Input Form -->
                     <div class="chat-input-wrapper">
                         <form id="chat-form" class="chat-input-form" method="POST" action="/?tab=chat#chat-form">
-                        {% csrf_token %}
+                            {% csrf_token %}
                             <input type="hidden" name="action_type" value="chat">
-                            <input type="text" id="user-query-input" name="query" placeholder="Ask a question about your knowledge base or code..." autocomplete="off">
+                            <input type="text" id="user-query-input" name="query" placeholder="Ask a question about your knowledge base or code..." autocomplete="off" required>
                             <button type="submit" id="btn-send-query" class="btn btn-icon-primary">
                                 <i class="fa-solid fa-paper-plane"></i>
                             </button>
@@ -155,31 +164,21 @@
                     <div class="card upload-card">
                         <div class="card-header">
                             <h3><i class="fa-solid fa-cloud-arrow-up"></i> Document Ingestion Engine</h3>
-                            <p>Ingest local folders or files into your isolated vector space</p>
+                            <p>Upload files into your isolated vector space</p>
                         </div>
                         <form id="ingest-form" class="ingest-form" method="POST" enctype="multipart/form-data">
                             {% csrf_token %}
                             <input type="hidden" name="action_type" value="ingest">
                             <div class="form-group">
-                               <label for="file-input">Select Document (.pdf, .txt, .md, .csv)</label>
-                               <div class="input-group">
-                                 <input type="file" id="file-input" name="document" accept=".pdf,.txt,.md,.csv" required>
-                                 <button type="submit" class="btn btn-primary">
-                                   <i class="fa-solid fa-cloud-arrow-up"></i> Upload & Ingest
-                                 </button>
-                               </div>
-                            </div>
-                            {% comment %} <div class="form-group">
-                                <label for="directory-input">Directory / Target Path</label>
+                                <label for="file-input">Select Document (.pdf, .txt, .md, .csv)</label>
                                 <div class="input-group">
-                                    <input type="text" id="directory-input" name="directory" value="data" placeholder="e.g. data">
+                                    <input type="file" id="file-input" name="document" accept=".pdf,.txt,.md,.csv" required>
                                     <button type="submit" class="btn btn-primary">
-                                        <i class="fa-solid fa-bolt"></i> Ingest & Embed
+                                        <i class="fa-solid fa-cloud-arrow-up"></i> Upload & Ingest
                                     </button>
                                 </div>
-                            </div> {% endcomment %}
+                            </div>
                         </form>
-                        <div id="ingest-status" class="ingest-status-box hidden"></div>
                     </div>
 
                     <div class="card">
@@ -190,26 +189,26 @@
                             <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th>Target Path</th>
-                                        <th>Chunks</th>
+                                        <th>Document Name</th>
+                                        <th>Total Chunks</th>
                                         <th>Owner</th>
                                         <th>Ingested At</th>
                                     </tr>
                                 </thead>
                                 <tbody id="documents-table-body">
-                                  {% for doc in documents %}
-                                    <tr>
-                                        <td><i class="fa-solid fa-file"></i> {{ doc.filename }}</td>
-                                        <td><span class="badge">{{ doc.total_chunks }}</span></td>
-                                        <td>{{ doc.owner.username }}</td>
-                                        <td>{{ doc.created_at|date:"M d, Y H:i" }}</td>
-                                    </tr>
-                                  {% empty %}
-                                    <tr>
-                                        <td colspan="4" class="text-center text-muted">No documents ingested yet. Upload a document above!</td>
-                                    </tr>
-                                  {% endfor %}
-                                
+                                    {% for doc in documents %}
+                                        <tr>
+                                            <td><i class="fa-solid fa-file"></i> {{ doc.filename }}</td>
+                                            <td><span class="badge">{{ doc.total_chunks }}</span></td>
+                                            <td>{{ doc.owner.username }}</td>
+                                            <td>{{ doc.created_at|date:"M d, Y H:i" }}</td>
+                                        </tr>
+                                    {% empty %}
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted">No documents ingested yet. Upload a document above!</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
                             </table>
                         </div>
                     </div>
@@ -221,11 +220,34 @@
                 <div class="history-container">
                     <div class="card">
                         <div class="card-header">
-                            <h3><i class="fa-solid fa-list-check"></i> Authenticated Query Log</h3>
-                            <p>History stored in SQLite / PostgreSQL linked to your JWT user profile</p>
+                            <h3><i class="fa-solid fa-list-check"></i> Authenticated Query History</h3>
+                            <p>History stored in SQLite / PostgreSQL linked to your user profile</p>
                         </div>
-                        <div id="history-log-list" class="history-log-list">
-                            <p class="text-muted">Loading query logs...</p>
+                        <div id="history-log-list" class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Intent</th>
+                                        <th>Question</th>
+                                        <th>Answer Preview</th>
+                                        <th>Timestamp</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in chat_history %}
+                                        <tr>
+                                            <td><span class="pill pill-{{ item.intent|lower }}">{{ item.intent }}</span></td>
+                                            <td><strong>{{ item.query|truncatechars:40 }}</strong></td>
+                                            <td>{{ item.answer|truncatechars:60 }}</td>
+                                            <td>{{ item.created_at|date:"M d, Y H:i" }}</td>
+                                        </tr>
+                                    {% empty %}
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted">No past queries logged yet.</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -245,66 +267,87 @@
 
             <!-- Login Form -->
             <form id="login-form" class="auth-form active" method="POST" action="/login/">
-               {% csrf_token %}
-               <div class="form-group">
+                {% csrf_token %}
+                <div class="form-group">
                     <label>Username</label>
                     <input type="text" name="username" required placeholder="developer_alex">
                 </div>
                 <div class="form-group">
                     <label>Password</label>
-        <input type="password" name="password" required placeholder="••••••••">
-    </div>
-    <button type="submit" class="btn btn-primary btn-block">Log In</button>
-</form>
+                    <input type="password" name="password" required placeholder="••••••••">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Log In</button>
+            </form>
 
             <!-- Register Form -->
             <form id="register-form" class="auth-form" method="POST" action="/web-register/">
-              {% csrf_token %}
-                 <div class="form-group">
-                   <label>Username</label>
-                   <input type="text" name="username" required placeholder="developer_alex">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" name="username" required placeholder="developer_alex">
                 </div>
                 <div class="form-group">
-                   <label>Email</label>
-                   <input type="email" name="email" required placeholder="alex@example.com">
+                    <label>Email</label>
+                    <input type="email" name="email" required placeholder="alex@example.com">
                 </div>
                 <div class="form-group">
-                   <label>Password</label>
-                   <input type="password" name="password" required placeholder="••••••••">
+                    <label>Password</label>
+                    <input type="password" name="password" required placeholder="••••••••">
                 </div>
                 <button type="submit" class="btn btn-primary btn-block">Create Account</button>
             </form>
-            <div id="auth-error-msg" class="auth-error-msg hidden"></div>
         </div>
     </div>
 
     <script>
-    window.addEventListener('DOMContentLoaded', () => {
-        const chatMessages = document.getElementById('chat-messages');
-        if (chatMessages) {
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-    });
-
-     // Open Login Modal when clicking sidebar login button
-    document.getElementById('btn-auth-action')?.addEventListener('click', () => {
-        document.getElementById('auth-modal')?.classList.remove('hidden');
-    });
-    // Close Login Modal when clicking 'X'
-    document.getElementById('btn-close-modal')?.addEventListener('click', () => {
-        document.getElementById('auth-modal')?.classList.add('hidden');
-    });
-    // Switch between Login and Register tabs inside modal
-    document.querySelectorAll('.modal-tab').forEach(tab => {
-        tab.addEventListener('click', (e) => {
-            document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
-            
-            e.target.classList.add('active');
-            const targetForm = e.target.getAttribute('data-auth-tab');
-            document.getElementById(`${targetForm}-form`)?.classList.add('active');
+        // Auto-scroll chat to bottom on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            const chatMessages = document.getElementById('chat-messages');
+            if (chatMessages) {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
         });
-    });
-</script>
+
+        // Open Login Modal when clicking sidebar login button
+        document.getElementById('btn-auth-action')?.addEventListener('click', () => {
+            document.getElementById('auth-modal')?.classList.remove('hidden');
+        });
+
+        // Close Login Modal when clicking 'X'
+        document.getElementById('btn-close-modal')?.addEventListener('click', () => {
+            document.getElementById('auth-modal')?.classList.add('hidden');
+        });
+
+        // Switch between Login and Register tabs inside modal
+        document.querySelectorAll('.modal-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+                
+                e.target.classList.add('active');
+                const targetForm = e.target.getAttribute('data-auth-tab');
+                document.getElementById(`${targetForm}-form`)?.classList.add('active');
+            });
+        });
+
+        // Mobile Sidebar Drawer Toggle
+        const sidebar = document.getElementById('app-sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+
+        document.getElementById('btn-toggle-sidebar')?.addEventListener('click', () => {
+            sidebar?.classList.add('open');
+            overlay?.classList.add('active');
+        });
+
+        document.getElementById('btn-close-sidebar')?.addEventListener('click', () => {
+            sidebar?.classList.remove('open');
+            overlay?.classList.remove('active');
+        });
+
+        overlay?.addEventListener('click', () => {
+            sidebar?.classList.remove('open');
+            overlay?.classList.remove('active');
+        });
+    </script>
 </body>
 </html>
