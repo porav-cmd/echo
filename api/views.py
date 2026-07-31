@@ -39,6 +39,8 @@ def home_view(request):
             if query:
                 result = route_and_execute(query, user_id=user_id)
                 owner_user = request.user if request.user.is_authenticated else User.objects.first()
+                if not owner_user:
+                    owner_user, _ = User.objects.get_or_create(username="guest", defaults={"email": "guest@example.com"})
 
                 ChatHistory.objects.create(
                     owner=owner_user,
@@ -59,6 +61,8 @@ def home_view(request):
 
                 result = load_document("media/uploads", user_id=user_id)
                 owner_user = request.user if request.user.is_authenticated else User.objects.first()
+                if not owner_user:
+                    owner_user, _ = User.objects.get_or_create(username="guest", defaults={"email": "guest@example.com"})
 
                 DocumentsMetaData.objects.create(
                     owner=owner_user,
