@@ -29,6 +29,9 @@ google-genai==2.10.0
 greenlet==3.5.4
 groq==0.37.1
 gunicorn==26.0.0
+whitenoise
+dj-database-url
+psycopg2-binary
 h11==0.16.0
 httpcore==1.0.9
 httpx==0.28.1

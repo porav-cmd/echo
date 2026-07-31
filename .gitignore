@@ -1,17 +1,20 @@
 # Virtual Environment
 venv/
+.venv/
 env/
 
-# Environment Variables & Secret API Keys
+# Environment Variables & Secret Keys
 .env
 
 # Python Caches
 __pycache__/
 *.pyc
 
-# Local Database & Uploaded Files
+# Local Database
 db.sqlite3
-media/
+
+# Static files
+staticfiles/
 
 # IDE Settings
 .vscode/
