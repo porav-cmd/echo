@@ -22,7 +22,7 @@ def classify_intent(query: str) -> str:
 Classify the user's input into EXACTLY ONE category:
 
 1. CODE: Use ONLY if the user explicitly requests to write, debug, refactor, or explain programming code/scripts.
-2. GENERAL: Use ONLY for simple greetings (e.g. "hi", "hello", "hey"), casual small talk, or farewells.
+2. GENERAL: Use for simple greetings (e.g. "hi", "hello", "hey", "hy", "hye", "greetings", "good morning", "good evening"), casual small talk, or farewells.
 3. RAG: Use for ALL OTHER QUESTIONS! Any factual query, name inquiry, entity lookup, document question, summary, or information search MUST be classified as RAG so the system searches the uploaded knowledge base.
 
 Return ONLY one word:
