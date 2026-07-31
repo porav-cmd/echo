@@ -7,10 +7,17 @@ from .langgraph_service import run_langgraph_rag
 
 def classify_intent(query: str) -> str:
     """
-    Classifies user query into 'RAG', 'CODE', or 'GENERAL' using Groq LLM.
-    Defaults to 'RAG' for any factual, document, name, or domain query.
+    Classifies user query into 'RAG', 'CODE', or 'GENERAL'.
+    Supports instant local classification for common greetings.
     """
-    groq_api_key = os.getenv("GROQ_API_KEY", "placeholder")
+    q_clean = query.lower().strip().strip("!.,?")
+    if q_clean in ["hi", "hello", "hey", "hy", "greetings", "good morning", "good evening", "howdy", "sup"]:
+        return "GENERAL"
+
+    groq_api_key = os.getenv("GROQ_API_KEY")
+    if not groq_api_key:
+        return "RAG"
+
     try:
         llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0, groq_api_key=groq_api_key)
         prompt = ChatPromptTemplate.from_messages([
@@ -46,18 +53,33 @@ def route_and_execute(query: str, user_id: int = 1) -> Dict[str, Any]:
     Multi-Agent Supervisor Router: Inspects classified intent and dispatches 
     the request to the appropriate specialized worker node (RAG, CODE, or GENERAL).
     """
-    groq_api_key = os.getenv("GROQ_API_KEY", "placeholder")
     intent = classify_intent(query)
+    groq_api_key = os.getenv("GROQ_API_KEY")
 
-    try:
-        llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.2, groq_api_key=groq_api_key)
+    if "GENERAL" in intent:
+        if groq_api_key:
+            try:
+                llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.5, groq_api_key=groq_api_key)
+                general_prompt = f"Provide a helpful, friendly, and concise response to:\n\nUser: {query}"
+                general_response = llm.invoke(general_prompt)
+                return {
+                    "query": query,
+                    "intent": "GENERAL",
+                    "answer": general_response.content,
+                    "user_id": user_id
+                }
+            except Exception:
+                pass
+        return {
+            "query": query,
+            "intent": "GENERAL",
+            "answer": "Hello! 👋 I am Echo, your Enterprise Knowledge Assistant. How can I help you today? You can ask me questions or upload documents to search.",
+            "user_id": user_id
+        }
 
-        if "RAG" in intent:
-            rag_result = run_langgraph_rag(query, user_id=user_id)
-            rag_result["intent"] = "RAG"
-            return rag_result
-
-        elif "CODE" in intent:
+    if "CODE" in intent and groq_api_key:
+        try:
+            llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.2, groq_api_key=groq_api_key)
             code_prompt = f"Write clean, efficient, and well-commented code for the following request:\n\nRequest: {query}"
             code_response = llm.invoke(code_prompt)
             return {
@@ -66,21 +88,10 @@ def route_and_execute(query: str, user_id: int = 1) -> Dict[str, Any]:
                 "answer": code_response.content,
                 "user_id": user_id
             }
+        except Exception:
+            pass
 
-        else:
-            general_prompt = f"Provide a helpful, friendly, and concise response to:\n\nUser: {query}"
-            general_response = llm.invoke(general_prompt)
-            return {
-                "query": query,
-                "intent": "GENERAL",
-                "answer": general_response.content,
-                "user_id": user_id
-            }
-    except Exception as e:
-        print(f"Routing execution notice: {e}")
-        return {
-            "query": query,
-            "intent": "RAG",
-            "answer": "System service initialized. Please configure API keys (GROQ_API_KEY / GOOGLE_API_KEY) in environment variables for full LLM responses.",
-            "user_id": user_id
-        }
+    # Default to RAG processing
+    rag_result = run_langgraph_rag(query, user_id=user_id)
+    rag_result["intent"] = "RAG"
+    return rag_result
