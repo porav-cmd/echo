@@ -1,29 +1,23 @@
-import os
 from typing import Dict, Any
+from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from .langgraph_service import run_langgraph_rag
 
+load_dotenv()
+
+
 
 def classify_intent(query: str) -> str:
     """
-    Classifies user query into 'RAG', 'CODE', or 'GENERAL'.
-    Supports instant local classification for common greetings.
+    Classifies user query into 'RAG', 'CODE', or 'GENERAL' using Groq LLM.
+    Defaults to 'RAG' for any factual, document, name, or domain query.
     """
-    q_clean = query.lower().strip().strip("!.,?")
-    if q_clean in ["hi", "hello", "hey", "hy", "greetings", "good morning", "good evening", "howdy", "sup"]:
-        return "GENERAL"
-
-    groq_api_key = os.getenv("GROQ_API_KEY")
-    if not groq_api_key:
-        return "RAG"
-
-    try:
-        llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0, groq_api_key=groq_api_key)
-        prompt = ChatPromptTemplate.from_messages([
-            (
-                "system",
-                """You are the Master Intent Classifier for an Enterprise Knowledge Base.
+    llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0)
+    prompt = ChatPromptTemplate.from_messages([
+        (
+            "system",
+            """You are the Master Intent Classifier for an Enterprise Knowledge Base.
 
 Classify the user's input into EXACTLY ONE category:
 
@@ -36,16 +30,13 @@ RAG
 CODE
 GENERAL
 """
-            ),
-            ("human", "{question}")
-        ])
+        ),
+        ("human", "{question}")
+    ])
 
-        chain = prompt | llm
-        response = chain.invoke({"question": query})
-        return response.content.strip().upper()
-    except Exception as e:
-        print(f"Intent classification notice: {e}")
-        return "RAG"
+    chain = prompt | llm
+    response = chain.invoke({"question": query})
+    return response.content.strip().upper()
 
 
 def route_and_execute(query: str, user_id: int = 1) -> Dict[str, Any]:
@@ -53,45 +44,30 @@ def route_and_execute(query: str, user_id: int = 1) -> Dict[str, Any]:
     Multi-Agent Supervisor Router: Inspects classified intent and dispatches 
     the request to the appropriate specialized worker node (RAG, CODE, or GENERAL).
     """
+    llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.2)
     intent = classify_intent(query)
-    groq_api_key = os.getenv("GROQ_API_KEY")
 
-    if "GENERAL" in intent:
-        if groq_api_key:
-            try:
-                llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.5, groq_api_key=groq_api_key)
-                general_prompt = f"Provide a helpful, friendly, and concise response to:\n\nUser: {query}"
-                general_response = llm.invoke(general_prompt)
-                return {
-                    "query": query,
-                    "intent": "GENERAL",
-                    "answer": general_response.content,
-                    "user_id": user_id
-                }
-            except Exception:
-                pass
+    if "RAG" in intent:
+        rag_result = run_langgraph_rag(query, user_id=user_id)
+        rag_result["intent"] = "RAG"
+        return rag_result
+
+    elif "CODE" in intent:
+        code_prompt = f"Write clean, efficient, and well-commented code for the following request:\n\nRequest: {query}"
+        code_response = llm.invoke(code_prompt)
         return {
             "query": query,
-            "intent": "GENERAL",
-            "answer": "Hello! 👋 I am Echo, your Enterprise Knowledge Assistant. How can I help you today? You can ask me questions or upload documents to search.",
+            "intent": "CODE",
+            "answer": code_response.content,
             "user_id": user_id
         }
 
-    if "CODE" in intent and groq_api_key:
-        try:
-            llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.2, groq_api_key=groq_api_key)
-            code_prompt = f"Write clean, efficient, and well-commented code for the following request:\n\nRequest: {query}"
-            code_response = llm.invoke(code_prompt)
-            return {
-                "query": query,
-                "intent": "CODE",
-                "answer": code_response.content,
-                "user_id": user_id
-            }
-        except Exception:
-            pass
-
-    # Default to RAG processing
-    rag_result = run_langgraph_rag(query, user_id=user_id)
-    rag_result["intent"] = "RAG"
-    return rag_result
+    else:
+        general_prompt = f"Provide a helpful, friendly, and concise response to:\n\nUser: {query}"
+        general_response = llm.invoke(general_prompt)
+        return {
+            "query": query,
+            "intent": "GENERAL",
+            "answer": general_response.content,
+            "user_id": user_id
+        }
