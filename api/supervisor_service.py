@@ -1,3 +1,4 @@
+import os
 from typing import Dict, Any
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
@@ -9,11 +10,13 @@ def classify_intent(query: str) -> str:
     Classifies user query into 'RAG', 'CODE', or 'GENERAL' using Groq LLM.
     Defaults to 'RAG' for any factual, document, name, or domain query.
     """
-    llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0)
-    prompt = ChatPromptTemplate.from_messages([
-        (
-            "system",
-            """You are the Master Intent Classifier for an Enterprise Knowledge Base.
+    groq_api_key = os.getenv("GROQ_API_KEY", "placeholder")
+    try:
+        llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0, groq_api_key=groq_api_key)
+        prompt = ChatPromptTemplate.from_messages([
+            (
+                "system",
+                """You are the Master Intent Classifier for an Enterprise Knowledge Base.
 
 Classify the user's input into EXACTLY ONE category:
 
@@ -26,13 +29,16 @@ RAG
 CODE
 GENERAL
 """
-        ),
-        ("human", "{question}")
-    ])
+            ),
+            ("human", "{question}")
+        ])
 
-    chain = prompt | llm
-    response = chain.invoke({"question": query})
-    return response.content.strip().upper()
+        chain = prompt | llm
+        response = chain.invoke({"question": query})
+        return response.content.strip().upper()
+    except Exception as e:
+        print(f"Intent classification notice: {e}")
+        return "RAG"
 
 
 def route_and_execute(query: str, user_id: int = 1) -> Dict[str, Any]:
@@ -40,30 +46,41 @@ def route_and_execute(query: str, user_id: int = 1) -> Dict[str, Any]:
     Multi-Agent Supervisor Router: Inspects classified intent and dispatches 
     the request to the appropriate specialized worker node (RAG, CODE, or GENERAL).
     """
-    llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.2)
+    groq_api_key = os.getenv("GROQ_API_KEY", "placeholder")
     intent = classify_intent(query)
 
-    if "RAG" in intent:
-        rag_result = run_langgraph_rag(query, user_id=user_id)
-        rag_result["intent"] = "RAG"
-        return rag_result
+    try:
+        llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.2, groq_api_key=groq_api_key)
 
-    elif "CODE" in intent:
-        code_prompt = f"Write clean, efficient, and well-commented code for the following request:\n\nRequest: {query}"
-        code_response = llm.invoke(code_prompt)
+        if "RAG" in intent:
+            rag_result = run_langgraph_rag(query, user_id=user_id)
+            rag_result["intent"] = "RAG"
+            return rag_result
+
+        elif "CODE" in intent:
+            code_prompt = f"Write clean, efficient, and well-commented code for the following request:\n\nRequest: {query}"
+            code_response = llm.invoke(code_prompt)
+            return {
+                "query": query,
+                "intent": "CODE",
+                "answer": code_response.content,
+                "user_id": user_id
+            }
+
+        else:
+            general_prompt = f"Provide a helpful, friendly, and concise response to:\n\nUser: {query}"
+            general_response = llm.invoke(general_prompt)
+            return {
+                "query": query,
+                "intent": "GENERAL",
+                "answer": general_response.content,
+                "user_id": user_id
+            }
+    except Exception as e:
+        print(f"Routing execution notice: {e}")
         return {
             "query": query,
-            "intent": "CODE",
-            "answer": code_response.content,
-            "user_id": user_id
-        }
-
-    else:
-        general_prompt = f"Provide a helpful, friendly, and concise response to:\n\nUser: {query}"
-        general_response = llm.invoke(general_prompt)
-        return {
-            "query": query,
-            "intent": "GENERAL",
-            "answer": general_response.content,
+            "intent": "RAG",
+            "answer": "System service initialized. Please configure API keys (GROQ_API_KEY / GOOGLE_API_KEY) in environment variables for full LLM responses.",
             "user_id": user_id
         }

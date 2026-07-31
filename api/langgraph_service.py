@@ -1,3 +1,4 @@
+import os
 from typing import List, Dict, Any, TypedDict
 from langgraph.graph import StateGraph, END
 from langchain_groq import ChatGroq
@@ -34,31 +35,36 @@ def generate_code_node(state: RagState) -> Dict[str, Any]:
     """
     Node 2: Generates a grounded response using retrieved documents and LCEL prompt chain.
     """
-    llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.2)
-    prompt = ChatPromptTemplate.from_messages([
-        (
-            "system",
-            """You are a helpful Enterprise AI Assistant.
-            Use ONLY the provided retrieved documents to answer the user's question accurately.
+    groq_api_key = os.getenv("GROQ_API_KEY", "placeholder")
+    try:
+        llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.2, groq_api_key=groq_api_key)
+        prompt = ChatPromptTemplate.from_messages([
+            (
+                "system",
+                """You are a helpful Enterprise AI Assistant.
+                Use ONLY the provided retrieved documents to answer the user's question accurately.
 
-            Instructions:
-             - Base your answer entirely on the provided context.
-             - Do not use ungrounded outside knowledge.
-             - If the answer cannot be found in the context, say "No relevant document found for your query."
-             - Be clear, concise, and structured.
-            """
-        ),
-        (
-            "human",
-            "Question: {question}\n\nRetrieved Documents:\n{documents}"
-        ),
-    ])
+                Instructions:
+                 - Base your answer entirely on the provided context.
+                 - Do not use ungrounded outside knowledge.
+                 - If the answer cannot be found in the context, say "No relevant document found for your query."
+                 - Be clear, concise, and structured.
+                """
+            ),
+            (
+                "human",
+                "Question: {question}\n\nRetrieved Documents:\n{documents}"
+            ),
+        ])
 
-    chain = prompt | llm
-    formatted_docs = "\n\n".join(state["documents"])
-    response = chain.invoke({"question": state["question"], "documents": formatted_docs})
-    
-    return {"answer": response.content}
+        chain = prompt | llm
+        formatted_docs = "\n\n".join(state["documents"])
+        response = chain.invoke({"question": state["question"], "documents": formatted_docs})
+        
+        return {"answer": response.content}
+    except Exception as e:
+        print(f"Langgraph node notice: {e}")
+        return {"answer": "No relevant document found for your query."}
 
 
 def fallback_node(state: RagState) -> Dict[str, Any]:
@@ -71,60 +77,58 @@ def fallback_node(state: RagState) -> Dict[str, Any]:
     }
 
 
-def decide_to_generate(state: RagState) -> str:
+def should_generate(state: RagState) -> str:
     """
-    Conditional Router Edge: Determines whether to route to generate_code_node or fallback_node.
+    Conditional Edge Evaluator: Inspects retrieved documents and routes to 
+    'generate' if context exists, or 'fallback' if empty.
     """
-    if state.get("documents") and len(state["documents"]) > 0:
+    if state["documents"]:
         return "generate"
     return "fallback"
 
 
-# Constructing the LangGraph StateMachine Workflow
+# Construct LangGraph State Graph
 workflow = StateGraph(RagState)
 
-# Add Graph Nodes
+# Add Nodes
 workflow.add_node("retrieve", retrieve_node)
 workflow.add_node("generate", generate_code_node)
 workflow.add_node("fallback", fallback_node)
 
-# Set Entry Point
+# Add Edges & Conditional Routing
 workflow.set_entry_point("retrieve")
-
-# Add Conditional Edge Routing from Retrieve
 workflow.add_conditional_edges(
     "retrieve",
-    decide_to_generate,
+    should_generate,
     {
         "generate": "generate",
         "fallback": "fallback"
     }
 )
-
-# Connect Terminal Nodes to END
 workflow.add_edge("generate", END)
 workflow.add_edge("fallback", END)
 
-# Compile Executable Graph Application
+# Compile LangGraph Pipeline
 app_graph = workflow.compile()
 
 
-def run_langgraph_rag(question: str, user_id: int = 1) -> Dict[str, Any]:
+def run_langgraph_rag(query: str, user_id: int = 1) -> Dict[str, Any]:
     """
-    Public invocation wrapper for running the compiled LangGraph RAG application.
+    Invokes the compiled LangGraph pipeline for stateful, graph-managed RAG execution.
     """
     initial_state = {
-        "question": question,
+        "question": query,
         "user_id": user_id,
         "documents": [],
         "sources": [],
         "answer": ""
     }
+
     final_state = app_graph.invoke(initial_state)
-    
+
     return {
-        "question": final_state["question"],
-        "answer": final_state["answer"],
+        "query": query,
+        "answer": final_state.get("answer", "No answer generated"),
         "sources": final_state.get("sources", []),
-        "user_id": final_state["user_id"]
+        "chunks_retrieved": len(final_state.get("documents", []))
     }
