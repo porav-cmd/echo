@@ -34,7 +34,7 @@ def generate_code_node(state: RagState) -> Dict[str, Any]:
     """
     Node 2: Generates a grounded response using retrieved documents and LCEL prompt chain.
     """
-    llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0.2)
+    llm = ChatGroq(model="openai/gpt-oss-20b", temperature=0.2)
     prompt = ChatPromptTemplate.from_messages([
         (
             "system",

@@ -90,7 +90,7 @@ def generate_rag_answer(query: str, user_id: int = 1) -> Dict[str, Any]:
     sources = list(set([doc.metadata.get("source", "Unknown") for doc in docs]))
 
     prompt = f"Answer the question based ONLY on the provided context.\n\nContext:\n{context}\n\nQuestion: {query}\nAnswer:"
-    llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0.2)
+    llm = ChatGroq(model="openai/gpt-oss-20b", temperature=0.2)
     response = llm.invoke(prompt)
 
     return {
