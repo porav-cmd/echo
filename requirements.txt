@@ -74,6 +74,7 @@ PyJWT==2.13.0
 pyOpenSSL==26.3.0
 python-discovery==1.2.2
 python-dotenv==1.2.2
+pypdf==5.6.1
 PyYAML==6.0.3
 regex==2026.6.28
 requests==2.34.2
@@ -100,3 +101,4 @@ xxhash==3.8.1
 yarl==1.24.2
 zope.interface==8.5
 zstandard==0.25.0
+pypdf
