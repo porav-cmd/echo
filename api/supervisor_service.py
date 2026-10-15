@@ -13,7 +13,7 @@ def classify_intent(query: str) -> str:
     Classifies user query into 'RAG', 'CODE', or 'GENERAL' using Groq LLM.
     Defaults to 'RAG' for any factual, document, name, or domain query.
     """
-    llm = ChatGroq(model="llama3-8b-8192", temperature=0)
+    llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0)
     prompt = ChatPromptTemplate.from_messages([
         (
             "system",
@@ -44,7 +44,7 @@ def route_and_execute(query: str, user_id: int = 1) -> Dict[str, Any]:
     Multi-Agent Supervisor Router: Inspects classified intent and dispatches 
     the request to the appropriate specialized worker node (RAG, CODE, or GENERAL).
     """
-    llm = ChatGroq(model="llama3-8b-8192", temperature=0.2)
+    llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0.2)
     intent = classify_intent(query)
 
     if "RAG" in intent:
